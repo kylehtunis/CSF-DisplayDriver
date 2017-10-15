@@ -62,22 +62,22 @@ _init_putc_graphic:
 
 ;;------ _putc( R0 ) ------------------
 _putc:
-    ST R1 saved_R1          ;;--   save caller's R1 register.
+    ST R1 psaved_R1          ;;--   save caller's R1 register.
     poll:                   ;;--   Do
     LDI R1 DSR_ptr          ;;--     read the DSR, R1 <=== DSR;
     BRzp poll               ;;--   until ready, DSR[15] == 1.
     STI R0 DDR_ptr          ;;--   display char, DDR <=== R0.
-    LD R1 saved_R1          ;;--   restore caller's R1.
+    LD R1 psaved_R1          ;;--   restore caller's R1.
     JMP R7                  ;;--   return to caller.
                             ;;--
     DDR_ptr:  .FILL xFE06   ;;--   points to DDR.
     DSR_ptr:  .FILL xFE04   ;;--   points to DSR.
-    saved_R1: .FILL x0000   ;;--   space for caller's R1.
+    psaved_R1: .FILL x0000   ;;--   space for caller's R1.
 
 ;;----- _getc() ----------------
 _getc:
-LOOP 	LDI R0 KBSR
-	BRzp LOOP
+gLOOP 	LDI R0 KBSR
+	BRzp gLOOP
 	LDI R0 KBDR
 
 	KBSR: .FILL xFE00
@@ -86,7 +86,7 @@ LOOP 	LDI R0 KBSR
 ;;----- _putc_graphic( R0 R1 ) -----------
 _putc_graphic:
 
-	BRnzp START	
+	BRnzp pSTART	
 	
 	ASCII_Ptr: .FILL AROW0
 	SAVED_R1: .FILL x0000
@@ -94,16 +94,21 @@ _putc_graphic:
 	SAVED_R3: .FILL x0000
 	SAVED_R4: .FILL x0000
 
-START	ST R1 SAVED_R1	;store values
+pSTART	ST R1 SAVED_R1	;store values
 	ST R2 SAVED_R2
 	ST R3 SAVED_R3
 	ST R4 SAVED_R4
 	LD R2 ASCII_Ptr
-	ADD R0 R0 #-41 ;ascii offset such that A=0
-LOOP	BRz WRITE
-	ADD R2 R2 #48
+	ADD R0 R0 #-16
+	ADD R0 R0 #-16
+	ADD R0 R0 #-9 ;ascii offset such that A=0
+pLOOP	BRz WRITE
+	ADD R2 R2 #15
+	ADD R2 R2 #15
+	ADD R2 R2 #15
+	ADD R2 R2 #3
 	ADD R0 R0 #-1
-	BRnzp LOOP
+	BRnzp pLOOP
 ROW_ADD .FILL x0080
 WRITE	LD R4 ROW_ADD
 	LDR R3 R2 #0 ;write row 0
@@ -377,48 +382,54 @@ WRITE	LD R4 ROW_ADD
 	ADD R1 R1 R4			;next row
 	ADD R1 R1 #-7
 	
-	LD R1 SAVED_R1	;restore values
-	LD R2 SAVED_R2
-	LD R3 SAVED_R3
-	LD R4 SAVED_R4
+	LDI R1 S1Ptr	;restore values
+	LDI R2 S2Ptr
+	LDI R3 S3Ptr
+	LDI R4 S4Ptr
 	JMP R7
+
+	S1Ptr	.FILL SAVED_R1
+	S2Ptr	.FILL SAVED_R2
+	S3Ptr	.FILL SAVED_R3
+	S4Ptr	.FILL SAVED_R4
 
 ;;----- _lil_win() -----------
 ;fill background blue
-	BRnzp START
-	SAVED_R1: .FILL x0000
-	SAVED_R2: .FILL x0000
-	SAVED_R3: .FILL x0000
-	SAVED_R4: .FILL x0000
-	SAVED_R5: .FILL x0000
+	BRnzp wSTART
+	wSAVED_R1: .FILL x0000
+	wSAVED_R2: .FILL x0000
+	wSAVED_R3: .FILL x0000
+	wSAVED_R4: .FILL x0000
+	wSAVED_R5: .FILL x0000
 
 	
 	VRAM_END	.FILL xFDFF
 	VRAM_START	.FILL xC000
 	BLUE		.FILL x001F
-START	ST R1 SAVED_R1	;store values
-	ST R2 SAVED_R2
-	ST R3 SAVED_R3
-	ST R4 SAVED_R4
-	ST R5 SAVED_R5
+wSTART	ST R1 wSAVED_R1	;store values
+	ST R2 wSAVED_R2
+	ST R3 wSAVED_R3
+	ST R4 wSAVED_R4
+	ST R5 wSAVED_R5
 	LD R1 VRAM_END
 	LD R2 VRAM_START
 	LD R3 BLUE
 	NOT R2 R2
 	ADD R2 R2 #1
-LOOP	STR R3 R1 #0
+wLOOP	STR R3 R1 #0
 	ADD R1 R1 -1
 	ADD R4 R1 R2
-	BRnp LOOP
+	BRnp wLOOP
 
 ;create window
+BRnzp w2START
 WIN_START_Ptr	.FILL xD820
 WIN_END_Ptr	.FILL xF8A4
 ROW_LEN		.FILL #84
 ROW_NUM		.FILL #40
 BLACK			.FILL x7FFF
 ROW_SIZE		.FILL x0080
-	LD R1 WIN_END_Ptr
+w2START	LD R1 WIN_END_Ptr
 	LD R2 ROW_LEN
 	LD R3 ROW_NUM
 	LD R4 BLACK
@@ -438,10 +449,10 @@ LOOP	STR R4 R1 #0
 ;initialize the cursor in R1
 	LD R1 WIN_START_PTr	
 
-	LD R2 SAVED_R2 ;restore values
-	LD R3 SAVED_R3
-	LD R4 SAVED_R4
-	LD R5 SAVED_R5
+	LD R2 wSAVED_R2 ;restore values
+	LD R3 wSAVED_R3
+	LD R4 wSAVED_R4
+	LD R5 wSAVED_R5
 	JMP R7
 
 

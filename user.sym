@@ -1,0 +1,10 @@
+// Symbol table
+// Scope level 0:
+//	Symbol Name       Page Address
+//	----------------  ------------
+//	LOOP              2001
+//	$               2000
+//	$               2001
+//	$               2002
+//	$               2003
+
