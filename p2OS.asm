@@ -410,8 +410,10 @@ LOOP	STR R4 R1 #0
 	ADD R3 R3 #-1
 	BRzp LOOP
 
-	LD R1 SAVED_R1	;restore values
-	LD R2 SAVED_R2
+;initialize the cursor in R1
+	LD R1 WIN_START_PTr	
+
+	LD R2 SAVED_R2 ;restore values
 	LD R3 SAVED_R3
 	LD R4 SAVED_R4
 	LD R5 SAVED_R5
