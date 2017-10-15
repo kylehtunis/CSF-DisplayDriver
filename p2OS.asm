@@ -22,10 +22,11 @@ _main:
     JSR _init_putc           ;;--   initialization phase.
 	JSR _init_getc
 	JSR _init_putc_graphic
+	JSR _init_lil_win
     LD  R7 USER_start        ;;--   prepare to jump to user.
     JMP R7                   ;;--   jump to USER space at x1000.
                              ;;--
-    USER_start: .FILL x1000  ;;--   pointer to USER space.
+    USER_start: .FILL x2000  ;;--   pointer to USER space.
 
 ;;------ init_putc() --------------
 _init_putc:
@@ -59,6 +60,16 @@ _init_putc_graphic:
     putc_graphic_TVT:   .FILL x0021  ;;--   points to putc()'s TVT slot.
     putc_graphic_ptr:   .FILL _putc_graphic  ;;--   points to putc().
 
+;;------ init_lil_win() --------------
+_init_lil_win:
+    LD  R1 lil_win_TVT          ;;--   R1 <=== TVT slot address.
+    LD  R0 lil_win_ptr          ;;--   R0 <=== putc()'s address.
+    STR R0 R1 #0             ;;--   write VT: R0 ===> MEM[R1].
+    jmp R7                   ;;--   return to OS main().
+                             ;;--
+    lil_win_TVT:   .FILL x0023  ;;--   points to putc()'s TVT slot.
+    lil_win_ptr:   .FILL _lil_win  ;;--   points to putc().
+
 
 ;;------ _putc( R0 ) ------------------
 _putc:
@@ -79,6 +90,7 @@ _getc:
 gLOOP 	LDI R0 KBSR
 	BRzp gLOOP
 	LDI R0 KBDR
+	RET
 
 	KBSR: .FILL xFE00
 	KBDR: .FILL xFE02
@@ -89,6 +101,7 @@ _putc_graphic:
 	BRnzp pSTART	
 	
 	ASCII_Ptr: .FILL AROW0
+	ASCII_Offset .FILL x0041
 	SAVED_R1: .FILL x0000
 	SAVED_R2: .FILL x0000
 	SAVED_R3: .FILL x0000
@@ -98,15 +111,18 @@ pSTART	ST R1 SAVED_R1	;store values
 	ST R2 SAVED_R2
 	ST R3 SAVED_R3
 	ST R4 SAVED_R4
+	LD R2 ASCII_Offset
+	NOT R2 R2
+	ADD R2 R2 #1
+	ADD R0 R0 R2 ;offset ascii such that A=0
 	LD R2 ASCII_Ptr
-	ADD R0 R0 #-16
-	ADD R0 R0 #-16
-	ADD R0 R0 #-9 ;ascii offset such that A=0
+	ADD R0 R0 #0
 pLOOP	BRz WRITE
 	ADD R2 R2 #15
 	ADD R2 R2 #15
 	ADD R2 R2 #15
-	ADD R2 R2 #3
+	ADD R2 R2 #15
+	ADD R2 R2 #2
 	ADD R0 R0 #-1
 	BRnzp pLOOP
 ROW_ADD .FILL x0080
@@ -386,6 +402,8 @@ WRITE	LD R4 ROW_ADD
 	LDI R2 S2Ptr
 	LDI R3 S3Ptr
 	LDI R4 S4Ptr
+	ADD R1 R1 #7 ;increment cursor
+
 	JMP R7
 
 	S1Ptr	.FILL SAVED_R1
@@ -394,6 +412,7 @@ WRITE	LD R4 ROW_ADD
 	S4Ptr	.FILL SAVED_R4
 
 ;;----- _lil_win() -----------
+_lil_win:
 ;fill background blue
 	BRnzp wSTART
 	wSAVED_R1: .FILL x0000
@@ -419,16 +438,16 @@ wSTART	ST R1 wSAVED_R1	;store values
 wLOOP	STR R3 R1 #0
 	ADD R1 R1 -1
 	ADD R4 R1 R2
-	BRnp wLOOP
+	BRp wLOOP
 
 ;create window
 BRnzp w2START
-WIN_START_Ptr	.FILL xD820
-WIN_END_Ptr	.FILL xF8A4
+WIN_START_Ptr	.FILL xD714
+WIN_END_Ptr	.FILL xE368
 ROW_LEN		.FILL #84
 ROW_NUM		.FILL #40
 BLACK			.FILL x7FFF
-ROW_SIZE		.FILL x0080
+ROW_SIZE		.FILL x007F
 w2START	LD R1 WIN_END_Ptr
 	LD R2 ROW_LEN
 	LD R3 ROW_NUM
@@ -447,10 +466,10 @@ LOOP	STR R4 R1 #0
 	BRzp LOOP
 
 ;initialize the cursor in R1
-	LD R1 WIN_START_PTr	
-
-	LD R2 wSAVED_R2 ;restore values
-	LD R3 wSAVED_R3
+	LD R1 WIN_START_Ptr	
+	AND R2 R2 #0
+	
+	LD R3 wSAVED_R3  ;restore values
 	LD R4 wSAVED_R4
 	LD R5 wSAVED_R5
 	JMP R7
@@ -558,9 +577,9 @@ BROW2:	.FILL x7fff
 
 BROW3:	.FILL x7fff
 .FILL x7c00
-.FILL x7cff
-.FILL x7cff
-.FILL x7cff
+.FILL x7fff
+.FILL x7fff
+.FILL x7fff
 .FILL x7c00
 .FILL x7fff
 

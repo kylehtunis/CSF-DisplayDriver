@@ -26,6 +26,6 @@ _boot:
                            ;;--   Never returns.
 
     OS_stack: .FILL xC000  ;;--   address OS stack area.
-    OS_main: .FILL x8000  ;;--   points to OS main().
+    OS_main: .FILL x5000  ;;--   points to OS main().
 
 .END
