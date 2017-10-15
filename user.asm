@@ -11,9 +11,12 @@
 
 .ORIG x2000     ;;-- loads to first page of user memory.
 
-    LD R0 msg   ;;-- load 1st char as argument for putc().
-    TRAP x07    ;;-- call putc( R0 ).
+;create the window
+	TRAP x23
 
-    msg:  .STRINGZ "hello world"
-
+;call getc() and putc_graphic() repeatedly
+LOOP 	TRAP x20
+	TRAP x21
+	BRnzp LOOP
+    
 .END

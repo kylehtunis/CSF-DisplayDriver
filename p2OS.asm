@@ -20,6 +20,8 @@
 ;------- OS main() ----------------
 _main:
     JSR _init_putc           ;;--   initialization phase.
+	JSR _init_getc
+	JSR _init_putc_graphic
     LD  R7 USER_start        ;;--   prepare to jump to user.
     JMP R7                   ;;--   jump to USER space at x1000.
                              ;;--
@@ -34,6 +36,29 @@ _init_putc:
                              ;;--
     putc_TVT:   .FILL x0007  ;;--   points to putc()'s TVT slot.
     putc_ptr:   .FILL _putc  ;;--   points to putc().
+
+
+;;------ init_getc() --------------
+_init_getc:
+    LD  R1 getc_TVT          ;;--   R1 <=== TVT slot address.
+    LD  R0 getc_ptr          ;;--   R0 <=== putc()'s address.
+    STR R0 R1 #0             ;;--   write VT: R0 ===> MEM[R1].
+    jmp R7                   ;;--   return to OS main().
+                             ;;--
+    getc_TVT:   .FILL x0020  ;;--   points to putc()'s TVT slot.
+    getc_ptr:   .FILL _getc  ;;--   points to putc().
+
+
+;;------ init_putc_graphic() --------------
+_init_putc_graphic:
+    LD  R1 putc_graphic_TVT          ;;--   R1 <=== TVT slot address.
+    LD  R0 putc_graphic_ptr          ;;--   R0 <=== putc()'s address.
+    STR R0 R1 #0             ;;--   write VT: R0 ===> MEM[R1].
+    jmp R7                   ;;--   return to OS main().
+                             ;;--
+    putc_graphic_TVT:   .FILL x0021  ;;--   points to putc()'s TVT slot.
+    putc_graphic_ptr:   .FILL _putc_graphic  ;;--   points to putc().
+
 
 ;;------ _putc( R0 ) ------------------
 _putc:
